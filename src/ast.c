@@ -15,6 +15,7 @@ void ast_free(ast* tree)
 	if(tree != NULL )
 	{
 		if ( strcmp(tree->type,"ENTIER") != 0)
+		{
 			if  ( strcmp(tree->type,"ID") != 0)
 			{
 				ast_free(tree->u.operation.left);
@@ -22,6 +23,8 @@ void ast_free(ast* tree)
 			}
 			else
 				free(tree->u.id);
+		}
+
 		free(tree);
 	}
 }
