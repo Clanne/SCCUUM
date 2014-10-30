@@ -2,6 +2,7 @@
 #define __HASH_TABLE_H__
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #define DATATYPE int
@@ -14,8 +15,8 @@ typedef struct data_chain{
 
 typedef struct htable {
 	size_t nb_elts ;
-	size_t size ;
-	size_t (*hashfunc) (const size_t , const char*) ;
+	const size_t size ;
+	const size_t (*hashfunc) (const size_t , const char*) ;
 	DataChain *table ;
 } HashTable ;
 
@@ -25,23 +26,24 @@ typedef struct htable {
 	@param hfunc A pointer on a hash function whose parameters are the tables size and a key
 	@return The new HashTable
 */
-HashTable init( const size_t size , size_t (*hfunc) (const size_t,const char*) ) ;
+HashTable ht_init( const size_t size , const size_t (*hfunc) (const size_t,const char*) ) ;
 	
 /**
 	adds new data to the HashTable
 	@param ht The table in which we are inserting the data
 	@param key The key matched to the data we would like to insert
 	@param d The inserted data
-	@return 1 if the key already exists and 0 otherwise
+	@return 1 if insertion was successful and 0 otherwise
 */
-int ht_add( HashTable *ht , char *key , const DATATYPE d ) ;
+int ht_add( HashTable *ht , const char *key , const DATATYPE d ) ;
 
 /**
 	deletes a key and its associate data
 	@param ht The table in which we are deleting data
 	@param key The key we wan't to be deleted
+	@return 1 if deletion was successful and 0 otherwise.
 */
-void ht_delete( HashTable *ht , const char *key ) ;
+int ht_delete( HashTable *ht , const char *key ) ;
 
 /**
 	fetches a pointer to the data linked to the key
@@ -49,6 +51,18 @@ void ht_delete( HashTable *ht , const char *key ) ;
 	@param key The key that will give us its associated data
 	@return NULL if the key could not be found, otherwise returns a pointer to the data
 */
-DATATYPE * ht_get( HashTable *ht , const char *key ) ;
+const DATATYPE * ht_get( const HashTable *ht , const char *key ) ;
+
+/**
+	deletes the hashtable and all the data its holding
+	@param ht The hashtable to delete
+*/
+void ht_destroy( HashTable ht ) ;
+
+/**
+	prints the hashtable (for debugging purposes)
+	@param ht The hashtable to print	
+*/
+void ht_print(HashTable ht) ;
 
 #endif 
