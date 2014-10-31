@@ -9,7 +9,9 @@
 
 typedef struct data_chain{
 	char *key ;
-	DATATYPE data ;		
+	DATATYPE data ;	// type/func/var
+// 	char* nom;
+//	union{bool dansregistre, int adresse }memorymap
 	struct data_chain *next ;
 } DataChain;
 

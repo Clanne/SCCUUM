@@ -9,10 +9,20 @@ syntaxe [+*()-\=<>{};.]
 
 %%
 
-{entier} { yylval.valeur = atoi(yytext); return ENTIER; }
-{id} { yylval.string = yytext; return ID; }
-{syntaxe} { return yytext[0]; }
-[\n] {return yytext[0];}
-. { printf("wtf? Are you drunk ?????\n"); }
+"if" 			{return IF;}
+"else" 			{return ELSE;}
+"while"			{return WHILE;}
+"for" 			{return FOR;}
+
+"++"			{return OPINCR;}
+"--"			{return OPDECR;}
+
+{entier} 		{ yylval.valeur = atoi(yytext); return ENTIER; }
+{id} 			{ yylval.string = strdup(yytext);return ID; }
+{syntaxe} 		{ return yytext[0]; }
+
+
+[ \t\n] 		{}
+. 			{ printf("wtf? Are you drunk ?????\n"); }
 
 %%
