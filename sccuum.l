@@ -1,5 +1,6 @@
 %{
 	#include "ast.h"
+	#include "quads.h"
 	#include "y.tab.h"
 %}
 
