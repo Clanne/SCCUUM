@@ -7,6 +7,15 @@
 
 #define DATATYPE int
 
+//enum symbol_type{
+//	TYPE_INT
+//}
+//
+//typedef struct symbol{
+//
+//
+//}
+
 typedef struct data_chain{
 	char *key ;
 	DATATYPE data ;		
