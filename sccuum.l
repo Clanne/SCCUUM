@@ -9,10 +9,17 @@ syntaxe [+*()-\=<>{};.]
 
 %%
 
+"main()"		{return MAIN;}
+
 "if" 			{return IF;}
 "else" 			{return ELSE;}
 "while"			{return WHILE;}
 "for" 			{return FOR;}
+
+"&&"			{return BOOL_AND;}
+"||"			{return BOOL_OR;}
+
+"int"			{return INT;}
 
 "++"			{return OPINCR;}
 "--"			{return OPDECR;}

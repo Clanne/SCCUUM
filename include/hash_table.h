@@ -5,7 +5,17 @@
 #include <stdio.h>
 #include <string.h>
 
-#define DATATYPE int
+
+typedef struct {
+	int type;
+	union {
+		struct {unsigned int* dimensions; unsigned int nb_dimensions ;} tableau;
+		struct {char* ret_type; unsigned int nb_args; char** arg_types;} function;
+	} u ;
+} IdType;
+		
+
+#define DATATYPE IdType
 
 typedef struct data_chain{
 	char *key ;
