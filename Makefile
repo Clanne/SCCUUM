@@ -5,7 +5,7 @@ CC=gcc
 CFLAGS= -g -Wall -I$(IDIR)
 
 # list of dependencies for main target
-OBJFILES=ast.o y.tab.o lex.yy.o
+OBJFILES=ast.o y.tab.o lex.yy.o quads.o
 OBJ=$(patsubst %,$(ODIR)/%,$(OBJFILES))
 
 sccuum: $(OBJ) | obj
