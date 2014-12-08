@@ -1,6 +1,5 @@
-#ifndef AST_H
-#define AST_h
-
+#ifndef __AST_H__
+#define __AST_H__
 
 #include <stdio.h>
 #include <stdlib.h>

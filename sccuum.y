@@ -1,6 +1,7 @@
 %{
 	#include "ast.h"
 	int yylex();
+	int yyerror( char *msg );
 %}
 
 %union{
@@ -17,6 +18,7 @@
 %left '+'
 %right '='
 %left '*'
+
 %%
 
 ligne: 
@@ -28,7 +30,7 @@ ligne:
 	;
 
 expr : 
-	expr '+' expr 		{$$ = ast_new_op("OPADDI",$1,$3);}
+	  expr '+' expr 	{$$ = ast_new_op("OPADDI",$1,$3);}
 	| expr '*' expr 	{$$ = ast_new_op("OPMULT",$1,$3);}
 	| expr '-' expr 	{$$ = ast_new_op("OPSOUS",$1,$3);}
 	| expr '/' expr 	{$$ = ast_new_op("OPDIVI",$1,$3);}
@@ -44,7 +46,7 @@ expr :
 	;
 
 stmt:
-	';'			{$$ = ast_new_op("NOOP",NULL,NULL);}
+	  ';'			{$$ = ast_new_op("NOOP",NULL,NULL);}
 	| ID '=' expr ';'	{$$ = ast_new_op("AFFECT",ast_new_id($1),$3);}
 	| expr ';'
 	;

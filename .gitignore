@@ -2,3 +2,5 @@ obj
 wtf
 .*.swp
 sccuum
+*y.tab.[ch]
+*lex.yy.c
