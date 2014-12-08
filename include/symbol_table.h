@@ -22,7 +22,7 @@ typedef struct data_chain{
 	struct data_chain *next ;
 } DataChain;
 
-typedef struct stable {
+typedef struct {
 	size_t nb_elts ;
 	size_t size ;
 	const size_t (*hashfunc) (const size_t , const char*) ;
