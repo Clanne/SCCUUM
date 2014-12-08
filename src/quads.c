@@ -21,6 +21,16 @@ QuadList ql_new( Quad q )
 	return newQl ;
 }
 
+QuadList ql_empty( void )
+{
+	QuadList newQl ;
+
+	newQl.head = newQl.tail = NULL ;
+	newQl.n = 0 ;
+
+	return newQl ;
+}
+
 QuadList ql_add( QuadList ql , Quad q )
 {
 	QuadList newQl = ql ;
@@ -29,8 +39,14 @@ QuadList ql_add( QuadList ql , Quad q )
 	newNode->q = q ;
 	newNode->next = NULL ;
 
-	newQl.n ++ ;
-	newQl.tail = newQl.tail->next = newNode ;
+	newQl.n = ql.n + 1 ;
+
+	if( ql.tail != NULL )
+		newQl.tail = newQl.tail->next = newNode ;
+	else{
+		newQl.tail = newNode ;
+		newQl.head = newNode ;
+	}
 
 	return newQl ;
 }
@@ -39,12 +55,20 @@ QuadList ql_concat( QuadList ql_left , QuadList ql_right )
 {
 	QuadList qlNew ;
 
-	qlNew.head = ql_left.head ;
-	qlNew.tail = ql_right.tail ;
+	if( ql_left.head != NULL )
+	{
+		qlNew.head = ql_left.head ;
+		ql_left.tail->next = ql_right.head ;
+	}
+	else 
+		qlNew.head = ql_right.head ;
+
+	if( ql_right.tail != NULL )
+		qlNew.tail = ql_right.tail ;
+	else 
+		qlNew.tail = ql_left.tail ;
 
 	qlNew.n = ql_left.n + ql_right.n ;
-
-	ql_left.tail->next = ql_right.head ;
 
 	return qlNew ;
 }

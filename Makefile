@@ -20,7 +20,7 @@ OBJFILES=ast.o y.tab.o lex.yy.o symbol_table.o quads.o
 OBJ=$(addprefix $(ODIR)/,$(OBJFILES))
 
 # linker
-$(MAIN): $(OBJ) 
+$(MAIN): $(OBJ) | $(addprefix $(SRC)/,lex.yy.c y.tab.c)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIB)
 
 # compiler
@@ -29,7 +29,7 @@ $(ODIR)/%.o: $(SRC)/%.c | obj
 
 # yacc
 $(SRC)/y.tab.c:
-	yacc -d sccuum.y 
+	yacc -d -v sccuum.y
 	mv y.tab.c $(SRC)
 	mv y.tab.h $(IDIR)
 

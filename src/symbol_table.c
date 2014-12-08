@@ -122,15 +122,15 @@ char * st_new_temp( SymbolTable *st , Symbol s )
 {
 	const char *tmp_prefix = "$tmp_" ;	
 	
-	unsigned int tmp_length = strlen( tmp_prefix ) + ceil( log( __next_tmp_num ) ) + 1 ;
+	const size_t n = strlen( tmp_prefix ) ;
+	size_t tmp_length = n + ceil( log10( ++ __next_tmp_num ) )+1;
 
 	char *tmp = malloc( tmp_length * sizeof( char ) ) ;
 
-	strcpy( tmp , tmp_prefix ) ;
-	sprintf( tmp , "%u" , __next_tmp_num ) ;
+	tmp = strcpy( tmp , tmp_prefix ) ;
+	sprintf( tmp + n  , "%u" , __next_tmp_num-1) ;
 
 	__st_add_no_alloc( st , tmp , s ) ;
-	__next_tmp_num ++ ;
 	
 	return tmp ; 
 }

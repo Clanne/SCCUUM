@@ -16,6 +16,12 @@ typedef struct symbol{
 	int const_val ;
 } Symbol ;
 
+static inline Symbol s_var_int()
+	{ return (Symbol){ TYPE_VAR_INT } ; }
+	
+static inline Symbol s_const_int( int val )
+	{ return (Symbol){ TYPE_CONST_INT , val } ; }
+
 typedef struct data_chain{
 	char *key ;
 	Symbol data ;		

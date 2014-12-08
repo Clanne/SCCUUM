@@ -1,5 +1,6 @@
 %{
 	#include "ast.h"
+	#include "quads.h"
 	#include "y.tab.h"
 %}
 
@@ -9,10 +10,27 @@ syntaxe [+*()-\=<>{};.]
 
 %%
 
-{entier} { yylval.valeur = atoi(yytext); return ENTIER; }
-{id} { yylval.string = yytext; return ID; }
-{syntaxe} { return yytext[0]; }
-[\n] {return yytext[0];}
-. { printf("wtf? Are you drunk ?????\n"); }
+"main()"		{return MAIN;}
+
+"if" 			{return IF;}
+"else" 			{return ELSE;}
+"while"			{return WHILE;}
+"for" 			{return FOR;}
+
+"&&"			{return BOOL_AND;}
+"||"			{return BOOL_OR;}
+
+"int"			{return INT;}
+
+"++"			{return OPINCR;}
+"--"			{return OPDECR;}
+
+{entier} 		{ yylval.valeur = atoi(yytext); return ENTIER; }
+{id} 			{ yylval.string = strdup(yytext);return ID; }
+{syntaxe} 		{ return yytext[0]; }
+
+
+[ \t\n] 		{}
+. 			{ printf("wtf? Are you drunk ?????\n"); }
 
 %%
