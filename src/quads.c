@@ -64,12 +64,12 @@ void complete( QuadList ql , unsigned long label )
 
 static void __print_quad( Quad q )
 {
-	printf( "addr:0x%x ,instr: %s %s %s " , q.label , instr , operandes[0] , operandes[1] ) ;
+	printf( "addr:0x%lx,  instr: %s, op1:%s, op2:%s, " , q.label , q.instr , q.operandes[0] , q.operandes[1] ) ;
 
 	if( quad_is_branch( q ) )
-		printf( "%s" , q.res.ret_id ) ;
+		printf( "res:%s" , q.res.ret_id ) ;
 	else
-		printf( "%x" , q.res.label ) ;
+		printf( "goto:%lx" , q.res.label ) ;
 
 	printf( "\n" ) ;
 }

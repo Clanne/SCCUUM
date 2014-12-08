@@ -1,7 +1,9 @@
 #ifndef __QUADS_H__
 #define __QUADS_H__
 
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct quad{
 	unsigned long label ;
@@ -28,6 +30,9 @@ typedef struct {
 //Quad quad_new_op( unsigned int label , char *op , char *oper1 , char *oper2 , char *ret ) ;
 //
 //Quad quad_new_branch( unsigned int label , char *op , char *oper1 , char *oper2 , unsigned int ret ) ; 
+
+static inline int quad_is_branch( Quad q )
+	{ return strncmp( q.instr , "BR" , 2 ) ; }
 
 unsigned long quad_next(void);
 
