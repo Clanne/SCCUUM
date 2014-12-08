@@ -27,9 +27,12 @@ typedef struct {
 	struct qlist_node *tail ;
 } QuadList ;
 
-//Quad quad_new_op( unsigned int label , char *op , char *oper1 , char *oper2 , char *ret ) ;
-//
-//Quad quad_new_branch( unsigned int label , char *op , char *oper1 , char *oper2 , unsigned int ret ) ; 
+static inline Quad qop( unsigned int label , char *op , char *oper1 , char *oper2 , char *ret ) 
+	{ return (Quad) { label , op , { oper1 , oper2 } , { ret } } ; }
+
+/*Cree un quad representant une instr de branchement*/
+Quad qbr( unsigned int label , char *op , char *oper1 , char *oper2 , unsigned int ret ) 
+	{ return (Quad) { label , op , { oper1 , oper2 } , .res.label = ret } ; }
 
 static inline int quad_is_branch( Quad q )
 	{ return strncmp( q.instr , "BR" , 2 ) ; }
