@@ -6,24 +6,9 @@
 #include <stdio.h>
 #include <string.h>
 
-enum symbol_type{
-	TYPE_VAR_INT ,
-	TYPE_CONST_INT
-} ;
-
-typedef struct symbol{
-	enum symbol_type type ;
-	int const_val ;
-} Symbol ;
-
-static inline Symbol s_var_int()
-	{ return (Symbol){ TYPE_VAR_INT } ; }
-	
-static inline Symbol s_const_int( int val )
-	{ return (Symbol){ TYPE_CONST_INT , val } ; }
+#include "symbol.h"
 
 typedef struct data_chain{
-	char *key ;
 	Symbol data ;		
 	struct data_chain *next ;
 } DataChain;
@@ -50,12 +35,12 @@ SymbolTable st_init( const size_t size , const size_t (*hfunc) (const size_t,con
 	@param d The inserted data
 	@return 1 if insertion was successful and 0 otherwise
 */
-int st_add( SymbolTable *st , const char *key , const Symbol d ) ;
+Symbol * st_add( SymbolTable *st , const Symbol s ) ;
 
 /**
  * TODO: doc
  */
-char * st_new_temp( SymbolTable *st , Symbol s ) ;
+Symbol * st_new_temp( SymbolTable *st , struct symbol_info s ) ;
 
 /**
 	deletes a key and its associate data
@@ -71,7 +56,7 @@ int st_delete( SymbolTable *st , const char *key ) ;
 	@param key The key that will give us its associated data
 	@return NULL if the key could not be found, otherwise returns a pointer to the data
 */
-const Symbol * st_lookup( const SymbolTable *st , const char *key ) ;
+Symbol * st_lookup( const SymbolTable *st , const char *key ) ;
 
 /**
 	deletes the hashtable and all the data its holding

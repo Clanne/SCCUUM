@@ -26,7 +26,7 @@ syntaxe [+*()-\=<>{};.]
 "--"			{return OPDECR;}
 
 {entier} 		{ yylval.valeur = atoi(yytext); return ENTIER; }
-{id} 			{ yylval.string = strdup(yytext);return ID; }
+{id} 			{ yylval.id = strdup(yytext);return ID; }
 {syntaxe} 		{ return yytext[0]; }
 
 

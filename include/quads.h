@@ -5,15 +5,33 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "symbol.h"
+
+/////////////////////////// Quad //////////////////////////
 typedef struct quad{
 	unsigned long label ;
 	char *instr ;	
-        char *operandes[2] ;
+        Symbol *operandes[2] ;
 	union{
-		char *ret_id ;
+		Symbol *ret_id ;
 		unsigned long label ;
 	} res ; 
-} Quad ;
+} *Quad ;
+
+
+static inline int quad_is_branch( Quad q )
+	{ return strncmp( q->instr , "BR" , 2 ) == 0; }
+
+unsigned long quad_next(void);
+
+unsigned long quad_to_come( void );
+
+Quad qop( char *op , Symbol *oper1 , Symbol *oper2 , Symbol *ret )  ;
+
+/*Cree un quad representant une instr de branchement*/
+Quad qbr( char *op , Symbol *oper1 , Symbol *oper2 , unsigned int ret ) ;
+
+/////////////////////// Quadlists ////////////////////////
 
 struct qlist_node {
         Quad q ;
@@ -25,25 +43,6 @@ typedef struct {
         struct qlist_node *head ;
 	struct qlist_node *tail ;
 } QuadList ;
-
-typedef struct {
-	QuadList code ;
-	QuadList true_list , false_list ;
-	QuadList next ;
-	char *result ;
-} Code ;
-
-static inline int quad_is_branch( Quad q )
-	{ return strncmp( q.instr , "BR" , 2 ) ; }
-
-unsigned long quad_next(void);
-
-static inline Quad qop( char *op , char *oper1 , char *oper2 , char *ret ) 
-	{ return (Quad) { quad_next() , op , { oper1 , oper2 } , { ret } } ; }
-
-/*Cree un quad representant une instr de branchement*/
-static inline Quad qbr( char *op , char *oper1 , char *oper2 , unsigned int ret ) 
-	{ return (Quad) { quad_next() , op , { oper1 , oper2 } , .res.label = ret } ; }
 
 QuadList ql_new( Quad q ) ;
 

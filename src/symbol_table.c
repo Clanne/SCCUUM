@@ -1,15 +1,15 @@
 #include "symbol_table.h"
 
 //returns 1 if successful and 0 otherwise
-static Symbol * __dc_add( DataChain *dc , char *key  , const Symbol d )
+static Symbol * __dc_add( DataChain *dc , const Symbol s )
 {
-	if( dc->key != NULL ) 
+	if( dc->data.id != NULL ) 
 	{
 		DataChain *ptr = dc ;
 
 		while( ptr != NULL )//go to the end of the list if the key doesn't exist
 		{
-			if( strcmp( dc->key , key ) == 0 ) 
+			if( strcmp( dc->data.id , s.id ) == 0 ) 
 				return NULL ;//the key already exists.
 			dc = ptr ;
 			ptr = ptr->next ;
@@ -19,8 +19,7 @@ static Symbol * __dc_add( DataChain *dc , char *key  , const Symbol d )
 		dc = dc->next ;
 	}
 
-	dc->key =  key ;
-	dc->data = d ;
+	dc->data = s ;
 	dc->next = NULL ;
 
 	return &dc->data ;//the key does not exist and new data was added.
@@ -29,11 +28,11 @@ static Symbol * __dc_add( DataChain *dc , char *key  , const Symbol d )
 //returns 1 if an element was deleted and 0 otherwise
 static int __dc_delete( DataChain *dc , const char *key )
 {
-	if( dc->key != NULL ) 
+	if( dc->data.id != NULL ) 
 	{
-		if(  strcmp ( dc->key , key ) == 0 )//check if key is the first member in the list
+		if(  strcmp ( dc->data.id , key ) == 0 )//check if key is the first member in the list
 		{
-			free( dc->key ) ;
+			free( dc->data.id ) ;
 			if( dc->next != NULL  ) 
 			{
 				DataChain *ptr = dc->next ;
@@ -41,18 +40,18 @@ static int __dc_delete( DataChain *dc , const char *key )
 				free( ptr ) ;
 			}
 			else
-				dc->key = NULL ;
+				dc->data.id = NULL ;
 			return 1 ;
 		}
 
-		while( dc->next != NULL && strcmp ( dc->next->key , key ) != 0 ) //search for key in the rest of list
+		while( dc->next != NULL && strcmp ( dc->next->data.id , key ) != 0 ) //search for key in the rest of list
 			dc = dc->next ;
 			
 		if( dc->next != NULL )//if the key exists
 		{
 			DataChain *ptr = dc->next ;
 			dc->next = dc->next->next ;
-			free ( ptr->key ) ;
+			free ( ptr->data.id ) ;
 			free ( ptr ) ;
 			return 1 ;
 		}
@@ -61,12 +60,12 @@ static int __dc_delete( DataChain *dc , const char *key )
 } 
 
 //returns NULL if key doesn't exist.
-static const Symbol * __dc_get( const DataChain *dc , const char *key )
+static Symbol * __dc_get( DataChain *dc , const char *key )
 {
-	if ( dc->key == NULL )
+	if ( dc->data.id == NULL )
 		return NULL ;
 
-	while ( dc != NULL && strcmp( dc->key , key ) != 0 ) ;
+	while ( dc != NULL && strcmp( dc->data.id , key ) != 0 ) ;
 		dc = dc->next ;
 
 	return ( dc == NULL ) ? NULL : &dc->data ;
@@ -75,13 +74,13 @@ static const Symbol * __dc_get( const DataChain *dc , const char *key )
 static void __dc_destroy( DataChain *dc )
 {
 	DataChain *tmp, *ptr = dc ;
-	if( ptr->key != NULL )
+	if( ptr->data.id != NULL )
 	{
-		free( ptr->key ) ;
+		free( ptr->data.id ) ;
 		ptr = ptr->next ;
 		while( ptr != NULL ) 
 		{
-			free( ptr->key ) ;
+			free( ptr->data.id ) ;
 			tmp = ptr ;
 			ptr = ptr->next ;
 			free( tmp ) ;
@@ -94,31 +93,19 @@ SymbolTable st_init( const size_t size , const size_t (*hfunc) (const size_t,con
 	return (SymbolTable) { 0 , size , hfunc , calloc( size , sizeof ( DataChain ) ) } ;
 }
 
-static Symbol * __st_add_no_alloc( SymbolTable *st , char *key , const Symbol d )
+Symbol * st_add( SymbolTable *st , const Symbol s )
 {
-	const size_t index = st->hashfunc( st->size , key ) ;
-	Symbol *ret = __dc_add( &st->table[index] , key , d ) ; 
+	const size_t index = st->hashfunc( st->size , s.id ) ;
+	Symbol *ret = __dc_add( &st->table[index] , s ) ; 
 
 	st->nb_elts += !ret ;
 
 	return ret ;
 }
 
-int st_add( SymbolTable *st , const char *key , const Symbol s )
-{
-	char *new_key = strdup( key ) ;
-
-	Symbol *ptr = __st_add_no_alloc( st , new_key , s ) ;
-
-	if( ptr == NULL )
-		free( new_key ) ;
-
-	return !ptr ;
-}
-
 static unsigned int __next_tmp_num = 1 ;
 
-char * st_new_temp( SymbolTable *st , Symbol s )
+Symbol * st_new_temp( SymbolTable *st , struct symbol_info si )
 {
 	const char *tmp_prefix = "$tmp_" ;	
 	
@@ -130,9 +117,9 @@ char * st_new_temp( SymbolTable *st , Symbol s )
 	tmp = strcpy( tmp , tmp_prefix ) ;
 	sprintf( tmp + n  , "%u" , __next_tmp_num-1) ;
 
-	__st_add_no_alloc( st , tmp , s ) ;
-	
-	return tmp ; 
+	Symbol s = (Symbol) { tmp , si } ;
+
+	return st_add( st , s ) ;
 }
 
 int st_delete( SymbolTable *st , const char *key )
@@ -145,7 +132,7 @@ int st_delete( SymbolTable *st , const char *key )
 	return ret ;
 }
 
-const Symbol * st_lookup( const SymbolTable *st , const char *key )
+Symbol * st_lookup( const SymbolTable *st , const char *key )
 {
 	const size_t index = st->hashfunc( st->size , key ) ;
 	return __dc_get( &st->table[index] , key ) ;		
@@ -169,7 +156,7 @@ void st_print(SymbolTable st)
 		printf( "h[%d] = " , i ) ;
 		while( ptr != NULL )
 		{
-			printf( "-> %s" ,  ptr->key ) ;
+			printf( "-> %s" ,  ptr->data.id ) ;
 			ptr = ptr->next ;
 		}
 		printf("\n");

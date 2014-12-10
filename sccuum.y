@@ -20,23 +20,30 @@
 %}
 
 %union{
-	Code code;
+	struct {
+		QuadList code ;
+		QuadList true_list , false_list ;
+		QuadList next ;
+		Symbol *result ;
+	} code;
+	unsigned int label ;
 	int valeur;
-	char* string;
-	char* op;
+	char *id;
 }
 
 %token <valeur> ENTIER
-%token <string> ID
+%token <id> ID
 %token IF ELSE
 %token WHILE FOR
 %token OPINCR OPDECR
 %token BOOL_OR BOOL_AND
 %token MAIN
 %token INT
-%type <code> expr bool_expr affect affect_list stmt stmt_list declaration
 
-%start fichiercode
+%type <code> expr bool_expr affect affect_list stmt stmt_list declaration
+%type <label> tag
+
+%start test
 
 %nonassoc ')'
 %nonassoc ELSE
@@ -44,6 +51,7 @@
 %left '+' '-'
 %left '*' '/'
 %nonassoc OPINCR OPDECR
+%left BOOL_AND
 
 %%
 
@@ -55,25 +63,25 @@ expr :
 	  expr '+' expr 				
 	{
 		$$.code  = ql_concat($1.code,$3.code);
-		$$.result = st_new_temp( &st , s_var_int() ) ; //st_new_temp();
+		$$.result = st_new_temp( &st , var_int() ) ; //st_new_temp();
 		$$.code = ql_add( $$.code, qop( "OPADD" , $1.result , $3.result , $$.result));
 	}
 	| expr '-' expr 				
 	{
 		$$.code  = ql_concat($1.code,$3.code);
-		$$.result = st_new_temp( &st , s_var_int() ) ; //st_new_temp();
+		$$.result = st_new_temp( &st , var_int() ) ; //st_new_temp();
 		$$.code = ql_add( $$.code, qop( "OPSUB" , $1.result , $3.result , $$.result));
 	}
 	| expr '*' expr 				
 	{
 		$$.code  = ql_concat($1.code,$3.code);
-		$$.result = st_new_temp( &st , s_var_int() ) ; //st_new_temp();
+		$$.result = st_new_temp( &st , var_int() ) ; //st_new_temp();
 		$$.code = ql_add( $$.code, qop( "OPMUL" , $1.result , $3.result , $$.result));
 	}
 	| expr '/' expr 				
 	{
 		$$.code  = ql_concat($1.code,$3.code);
-		$$.result = st_new_temp( &st , s_var_int() ) ; //st_new_temp();
+		$$.result = st_new_temp( &st , var_int() ) ; //st_new_temp();
 		$$.code = ql_add( $$.code, qop( "OPDIV" , $1.result , $3.result , $$.result));
 	}
 	| '(' expr ')'
@@ -81,97 +89,89 @@ expr :
 	{
 		$$.code= $2.code;
 		$$.result = $2.result ;
-		$$.false_list = $2.false_list;
-		$$.true_list = $2.true_list;
 	}
 	| '+' expr
 	{
 		$$.code = $2.code;
 		$$.result = $2.result ;
-		$$.true_list = $2.true_list;
-		$$.false_list = $2.false_list;
-		$$.next = $2.next;
 	}
 	| '-' expr
 	{
 		$$.code  = $2.code;
-		$$.result = "new_tmp"; //st_new_temp();
+		$$.result = st_new_temp( &st , var_int() ) ; //st_new_temp();
 		$$.code = ql_add($$.code, qop( "OPNEG" , $2.result , NULL , $$.result));
 	}
 	| ID OPINCR
 	{
-		$$.result = "new_tmp"; //st_new_temp();
-		$$.code = ql_new( qop( "OPPOSTINC" , $1 , NULL , $$.result ) );
+		$$.result = st_new_temp( &st , var_int() ) ; //st_new_temp();
+		$$.code = ql_new( qop( "OPPOSTINC" , st_lookup( &st , $1 ) , NULL , $$.result ) );
 	}
 	| OPINCR ID
 	{
-		$$.result = "new_tmp"; //st_new_temp();
-		$$.code = ql_new( qop( "OPPREINC" , $2 , NULL , $$.result ) );
+		$$.result = st_new_temp( &st , var_int() ) ; //st_new_temp();
+		$$.code = ql_new( qop( "OPPREINC" , st_lookup( &st ,$2 ) , NULL , $$.result ) );
 	}
 	| ID OPDECR
 	{
-		$$.result = "new_tmp"; //st_new_temp();
-		$$.code = ql_new( qop( "OPPOSTDEC" , $1 , NULL , $$.result ) );
+		$$.result = st_new_temp( &st , var_int() ) ; //st_new_temp();
+		$$.code = ql_new( qop( "OPPOSTDEC" , st_lookup( &st ,$1 ) , NULL , $$.result ) );
 	}
 	| OPDECR ID
 	{
-		$$.result = "new_tmp"; //st_new_temp();
-		$$.code = ql_new( qop( "OPPREDEC" , $2 , NULL , $$.result ) );
+		$$.result = st_new_temp( &st , var_int() ) ; //st_new_temp();
+		$$.code = ql_new( qop( "OPPREDEC" , st_lookup( &st ,$2 ) , NULL , $$.result ) );
 	}
 	| ENTIER
 	{
 		$$.code = ql_empty() ;
-		$$.result = st_new_temp( &st , s_const_int($1) ) ; 
+		$$.result = st_new_temp( &st , const_int($1) ) ; 
 	}
 
-	/*| bool_expr
-	{
-		$$.code= $1.code;
-		$$.falselist = $1.false_list;
-		$$.truelist = $1.true_list;
-	}*/
 	| ID
 	{
 		$$.code = ql_empty();
-		$$.result = $1;
-	}
-	;
-/*
-bool_expr :
-	  expr BOOL_AND expr
-	{
-		complete($1.true_list, $3.code.head->q.label);
-		$$.true_list = $3.true_list;
-		$$.false_list = concat($1.falselist, $3.falselist);
-		// Et puis le code de $$ c’est la concaténation des
-		// codes de $1 et $3
-		$$.code = quad_concat($1.code, $3.code);
-	}
-	| expr BOOL_OR expr			
-	{
-		complete($1.false_list, $3.code.head->q.label);
-   		$$.true_list = concat($1.true_list, $3.true_list);
-   		$$.false_list = $3.false_list;
-		 	// Et puis le code de $$ c’est la concaténation des
-		   	 // codes de $1 et $3
-    		$$.code = quad_concat($1.code, $3.code);
-	}
-	| expr '>' expr
-	{
-		$$.true_list = newList(nextQuad);
-		$$.false_list = newList(nextQuad + 1);
-		// gen incrémente newQuad    
-		gen("if $1.result > $3.result goto ?");
-		gen("goto ?");
-	}
-	| '!' expr					
-	{	
-		$$.true_list=$2.false_list;
-		$$.false_list=$2.true_list;
-		$$.code=$2.code;
+		$$.result = st_add( &st , s_var_int( $1 ) ) ;
 	}
 	;
 
+tag:
+	 /* vide */	{ $$ = quad_to_come() ; }
+	;
+
+test:
+	  bool_expr 
+	{
+		ql_print( $1.code ) ;
+	}
+	;
+
+bool_expr :
+	  bool_expr BOOL_AND tag bool_expr
+	{
+		complete($1.true_list, $3 );
+		$$.true_list = $4.true_list;
+		$$.false_list = ql_concat($1.false_list, $4.false_list);
+		$$.code = ql_concat($1.code, $4.code);
+	}
+	| bool_expr BOOL_OR tag bool_expr
+	{
+		complete( $1.false_list , $3 ) ;
+		$$.true_list = ql_concat( $1.true_list , $4.true_list ) ;
+		$$.false_list = $1.false_list ;
+		$$.code = ql_concat( $1.code , $4.code ) ;
+	}
+	| expr '>' expr
+	{
+		Quad tq = qbr( "BRGT" , $1.result , $3.result , 0 ) ;
+		Quad fq = qbr( "BRGOTO" , NULL , NULL , 0 ) ;
+		$$.true_list = ql_new( tq ) ;
+		$$.false_list = ql_new( fq ) ;
+
+		$$.code = ql_add( ql_add( ql_concat( $1.code , $3.code ) , tq ) , fq ) ;
+	}
+	;
+
+ /*
 declaration :
 	  INT ID					{$$ = ast_new_id($2);}
 	| INT affect_list				{$$ = $2;}
@@ -213,8 +213,8 @@ stmt:
 stmt_list:
 	  stmt						{$$ = $1;}
 	| stmt_list stmt				{$$ = ast_new_op("STLIST",2,$1,$2);}
-	;
-*/
+	; 
+ */
 
 %%
 
