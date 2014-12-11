@@ -14,9 +14,10 @@ void __symbol_to_mips( Symbol *s , FILE *out )
 	switch( s->info.type )
 	{
 		case TYPE_VAR_INT:
-		case TYPE_CONST_INT:
 			__int_to_mips( s , out ) ;
 			break ;
+		case TYPE_CONST_INT:
+			break ; /* ne rien faire ( pour l'instant ) */
 		default:
 			;
 	}

@@ -34,7 +34,7 @@
 %token MAIN PRINTI RETURN
 %token INT VOID
 
-%type <code> expr bool_expr affect affect_list stmt stmt_list declaration tag_goto
+%type <code> expr bool_expr affect affect_list affect_or_expr stmt stmt_list declaration declaration_list tag_goto
 %type <instr> rel_op
 %type <label> tag
 
@@ -53,10 +53,10 @@
 %%
 
 axiom :
-	  INT MAIN '(' VOID ')' '{' stmt_list RETURN ENTIER ';' '}'
+	  INT MAIN '(' VOID ')' '{' stmt_list RETURN expr ';' '}'
 	{
 		Quad q = qop( "EXIT" , NULL , NULL , NULL ) ;
-		$7.code = ql_add( $7.code , q ) ;
+		$7.code = ql_add( ql_concat( $7.code , $9.code ) , q ) ;
 
 		st_to_mips( &st , fout ) ;
 		ql_to_mips( $7.code , fout ) ;
@@ -91,7 +91,6 @@ expr :
 		$$.code = ql_add( $$.code, qop( "OPDIV" , $1.result , $3.result , $$.result));
 	}
 	| '(' expr ')'
-
 	{
 		$$.code= $2.code;
 		$$.result = $2.result ;
@@ -154,29 +153,33 @@ rel_op :
 	;
 
 
-affect :
-	  ID '=' expr
-	{
-		Quad q = qop( "OPMOVE" , $3.result , NULL , lookup( &st , $1 ) ) ;
-		$$.code = ql_concat( $3.code , ql_new( q ) ) ;
-	}
-	;
 
-affect_list :
-	  affect ',' affect_list
+declaration_list :
+	  ID ',' declaration_list
 	{
-		$$.code = ql_concat( $1.code , $3.code ) ;
+		st_add( &st , s_var_int( $1 ) ) ; 
+		$$ = $3 ;
 	}
-	| affect
+	| ID '=' expr ',' declaration_list
 	{
-		$$ = $1 ;
+		Symbol *s = st_add( &st , s_var_int( $1 ) ) ;
+		$$.code = ql_add( ql_concat( $3.code , $5.code ) ,  qop( "OPMOVE" , $3.result , NULL , s ) ) ;
+	}
+	| ID
+	{
+		st_add( &st , s_var_int( $1 ) ) ; 
+	}
+	| ID '=' expr
+	{
+		Symbol *s = st_add( &st , s_var_int( $1 ) ) ;
+		$$.code = ql_add( $3.code , qop( "OPMOVE" , $3.result , NULL , s ) ) ;
 	}
 	;
 
 declaration :
-	  INT ID ';'
+	  INT declaration_list ';'
 	{
-		st_add( &st , s_var_int( $2 ) ) ; 
+		$$ = $2 ;
 	}
 	;
 
@@ -224,6 +227,31 @@ tag_goto :
 		$$.next = ql_new( q ) ;
 	}
 	;
+
+affect :
+	  ID '=' expr
+	{
+		Quad q = qop( "OPMOVE" , $3.result , NULL , lookup( &st , $1 ) ) ;
+		$$.code = ql_concat( $3.code , ql_new( q ) ) ;
+	}
+	;
+
+affect_list :
+	  affect ',' affect_list
+	{
+		$$.code = ql_concat( $1.code , $3.code ) ;
+	}
+	| affect
+	{
+		$$ = $1 ;
+	}
+	;
+
+affect_or_expr :
+	  affect_list	{ $$ = $1 ; }
+	| expr		{ $$ = $1 ; }
+	;
+
 stmt :
 	  IF '(' bool_expr ')' tag stmt 
 	{
@@ -250,7 +278,7 @@ stmt :
 		$$.next = $4.false_list ;
 		$$.code = ql_add( ql_concat( $4.code , $7.code ) , qoto( $2 ) ) ;
 	}
-	| FOR '(' affect_list ';' tag bool_expr ';' tag affect_list tag_goto ')' tag stmt
+	| FOR '(' affect_list ';' tag bool_expr ';' tag affect_or_expr tag_goto ')' tag stmt
 	{
 		complete( $6.true_list , $12 ) ;
 		complete( $10.next , $5 ) ;
@@ -300,6 +328,22 @@ stmt_list :
 
 %%
 
+char * new_fname( char *old_name )
+{
+	int i = 0 ;
+	static char buf[256] ;
+	
+	while( old_name[i] != '.' && old_name[i] != '\0' )
+	{ 
+		buf[i] = old_name[i] ;
+		++ i ;
+	}
+
+	strcpy( buf + i , ".s" ) ;
+
+	return buf ;
+}
+
 int yyerror (char *s) 
 {
 	printf("\n%s\n", s);
@@ -316,7 +360,7 @@ int main(int argc, char** argv)
 	st = st_init( 10, &checksum ) ;
 	yyin = fopen(argv[1],"r");
 
-	fout = fopen( "output.s" , "w+" ) ;
+	fout = fopen( new_fname( argv[1] ) , "w+" ) ;
 
 	yyparse();
 	return 0;

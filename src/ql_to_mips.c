@@ -56,6 +56,7 @@ void __instr_to_mips( char *instr , char *op1 , char *ret , FILE *out )
 
 	switch( __get_op_code( instr ) )
 	{
+	case NOP: fprintf( out , "\tnop\n" ) ; break ;
 	case ADD: opname = "add" ; __bin_op( opname , ret , out ) ; break ;
 	case SUB: opname = "sub" ; __bin_op( opname , ret , out ) ; break ;
 	case MUL: opname = "mul" ; __bin_op( opname , ret , out ) ; break ;
@@ -89,19 +90,28 @@ void __branch_to_mips( char *instr  , unsigned int label , FILE *out )
 	}
 }
 
+char * __load_operande( Symbol *s , char *reg , FILE *out )
+{
+	char *ret = NULL ;
+	if( s != NULL )
+	{
+		ret = s->id ;
+		if( s->info.type == TYPE_VAR_INT ) 
+			fprintf( out , "\tlw\t%s, %s\n" , reg , ret ) ;
+		if( s->info.type == TYPE_CONST_INT )
+			fprintf( out , "\tli\t%s, %d\n" , reg , s->info.u.const_val ) ;
+	}
+	return ret ;
+}
+
 void __quad_to_mips( Quad q , FILE *out ) 
 {
-	char *op1 = NULL ;
+	char *op1 ;
 	fprintf( out , "label%lu:\n" , q->label ) ;
-
-	if( q->operandes[0] != NULL )
-	{
-		op1 = q->operandes[0]->id ;
-		fprintf( out , "\tlw\t$t0, %s\n" ,  op1 ) ;
-	}
-
-	if( q->operandes[1] != NULL )
-		fprintf( out , "\tlw\t$t1, %s\n" , q->operandes[1]->id ) ;
+	
+	op1 = __load_operande( q->operandes[0] , "$t0" , out ) ;
+	
+	__load_operande( q->operandes[1] , "$t1" , out ) ;
 
 	if( quad_is_branch( q ) )
 		__branch_to_mips( q->instr , q->res.label , out ) ;

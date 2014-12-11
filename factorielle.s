@@ -1,24 +1,21 @@
 .data
 
-	n: 		.word 0
 	res: 		.word 0
+	n: 		.word 0
 	i: 		.word 0
-	_tmp_1: 		.word 10
-	_tmp_2: 		.word 1
-	_tmp_3: 		.word 1
 	_tmp_4: 		.word 0
 .text
 
 main:
 label1:
-	lw	$t0, _tmp_1
-	sw 	$t0, n
-label2:
-	lw	$t0, _tmp_2
+	li	$t0, 1
 	sw 	$t0, res
-label3:
-	lw	$t0, _tmp_3
+label2:
+	li	$t0, 1
 	sw 	$t0, i
+label3:
+	li	$t0, 10
+	sw 	$t0, n
 label4:
 	lw	$t0, i
 	lw	$t1, n
