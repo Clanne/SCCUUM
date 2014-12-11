@@ -1,5 +1,5 @@
-#ifndef __QUADS_H__
-#define __QUADS_H__
+#ifndef __QUAD_H__
+#define __QUAD_H__
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,7 +7,6 @@
 
 #include "symbol.h"
 
-/////////////////////////// Quad //////////////////////////
 typedef struct quad{
 	unsigned long label ;
 	char *instr ;	
@@ -31,29 +30,7 @@ Quad qop( char *op , Symbol *oper1 , Symbol *oper2 , Symbol *ret )  ;
 /*Cree un quad representant une instr de branchement*/
 Quad qbr( char *op , Symbol *oper1 , Symbol *oper2 , unsigned int ret ) ;
 
-/////////////////////// Quadlists ////////////////////////
-
-struct qlist_node {
-        Quad q ;
-        struct qlist_node *next ;
-} ;
-
-typedef struct {
-        size_t n ;
-        struct qlist_node *head ;
-	struct qlist_node *tail ;
-} QuadList ;
-
-QuadList ql_new( Quad q ) ;
-
-QuadList ql_empty( void ) ;
-
-QuadList ql_add( QuadList ql , Quad q ) ;
-
-QuadList ql_concat( QuadList ql_left , QuadList ql_right ) ;
-
-void complete( QuadList ql , unsigned long label ) ;
-
-void ql_print( QuadList ql ) ;
+static inline Quad qoto( unsigned int label )
+	{ return qbr( "BRGOTO" , NULL , NULL , label ) ; }
 
 #endif

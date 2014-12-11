@@ -1,6 +1,7 @@
 %{
+	#include "error.h"
+	#include "quad_list.h"
 	#include "symbol_table.h"
-	#include "quads.h"
 
 	int yylex();
 	int yyerror( char *msg );
@@ -16,7 +17,6 @@
 	}
 
 	SymbolTable st ;
-	
 %}
 
 %union{
@@ -29,6 +29,7 @@
 	unsigned int label ;
 	int valeur;
 	char *id;
+	char *instr ;
 }
 
 %token <valeur> ENTIER
@@ -37,13 +38,15 @@
 %token WHILE FOR
 %token OPINCR OPDECR
 %token BOOL_OR BOOL_AND
+%token EQ GEQ LEQ
 %token MAIN
 %token INT
 
-%type <code> expr bool_expr affect affect_list stmt stmt_list declaration
+%type <code> expr bool_expr affect affect_list stmt stmt_list declaration tag_goto
+%type <instr> rel_op
 %type <label> tag
 
-%start test
+%start axiom
 
 %nonassoc ')'
 %nonassoc ELSE
@@ -51,12 +54,21 @@
 %left '+' '-'
 %left '*' '/'
 %nonassoc OPINCR OPDECR
-%left BOOL_AND
+%right '!'
+%left BOOL_AND BOOL_OR
+%left '>' '<' EQ GEQ LEQ
 
 %%
 
-fichiercode: 
-	  expr	{ ql_print($1.code);}
+axiom :
+	  stmt_list 
+	{
+		Quad q = qop( "EXIT" , NULL , NULL , NULL ) ;
+		$1.code = ql_add( $1.code , q ) ;
+
+		st_print( st ) ;
+		ql_print( $1.code  ) ;
+	}
 	;
 
 expr : 
@@ -130,18 +142,50 @@ expr :
 	| ID
 	{
 		$$.code = ql_empty();
-		$$.result = st_add( &st , s_var_int( $1 ) ) ;
+		$$.result = st_lookup( &st , $1 ) ;
+
+		if( $$.result == NULL )
+			not_declared_error( $1 ) ;
 	}
 	;
 
-tag:
+tag :
 	 /* vide */	{ $$ = quad_to_come() ; }
 	;
 
-test:
-	  bool_expr 
+rel_op :
+	  '>'		{ $$ = "BRGT" ; } 
+	| '<'		{ $$ = "BRLT" ; }
+	| EQ		{ $$ = "BREQ" ; }
+	| GEQ 		{ $$ = "BRGEQ" ; }
+	| LEQ		{ $$ = "BRLEQ" ; }
+	;
+
+
+affect :
+	  ID '=' expr
 	{
-		ql_print( $1.code ) ;
+		Quad q = qop( "OPMOVE" , $3.result , NULL , st_lookup( &st , $1 ) ) ;
+		$$.code = ql_concat( $3.code , ql_new( q ) ) ;
+	}
+	;
+
+affect_list :
+	  affect ',' affect_list
+	{
+		$$.code = ql_concat( $1.code , $3.code ) ;
+	}
+	| affect
+	{
+		$$ = $1 ;
+	}
+	;
+
+declaration :
+	  INT ID ';'
+	{
+		if( st_add( &st , s_var_int( $2 ) ) == NULL ) 
+			already_declared_error( $2 ) ;
 	}
 	;
 
@@ -157,80 +201,124 @@ bool_expr :
 	{
 		complete( $1.false_list , $3 ) ;
 		$$.true_list = ql_concat( $1.true_list , $4.true_list ) ;
-		$$.false_list = $1.false_list ;
+		$$.false_list = $4.false_list ;
 		$$.code = ql_concat( $1.code , $4.code ) ;
 	}
-	| expr '>' expr
+	| '!' bool_expr
 	{
-		Quad tq = qbr( "BRGT" , $1.result , $3.result , 0 ) ;
+		$$.true_list = $2.false_list ;
+		$$.false_list = $2.true_list ;
+		$$.code = $2.code ;
+	}
+	| expr rel_op expr
+	{
+		Quad tq = qbr( $2 , $1.result , $3.result , 0 ) ;
 		Quad fq = qbr( "BRGOTO" , NULL , NULL , 0 ) ;
 		$$.true_list = ql_new( tq ) ;
 		$$.false_list = ql_new( fq ) ;
 
 		$$.code = ql_add( ql_add( ql_concat( $1.code , $3.code ) , tq ) , fq ) ;
 	}
-	;
-
- /*
-declaration :
-	  INT ID					{$$ = ast_new_id($2);}
-	| INT affect_list				{$$ = $2;}
-	;
-affect :
-
-	  ID '=' expr					{$$ = ast_new_op("AFFECT",2,ast_new_id($1),$3);}
-	;
-
-affect_list:
-	  affect					{$$ = $1;}
-	| affect_list ',' affect			{$$ = ast_new_op("AFLIST",2,$1,$3);}
-	;
-stmt:
-	  ';'						{$$ = ast_new_op("NOOP",0);}
-	| '{' stmt_list '}'				{$$ = $2;}
-	| affect_list					{$$ = $1;}
-	| declaration					{$$ = $1;}
-	| expr ';'					{$$ = $1;}
-
-	| IF '(' expr ')' stmt 				{$$ = ast_new_op("IF",2,$3,$5);}
+	| '(' bool_expr ')'
 	{
-		complete($3.truelist, $5;label_premier_quad);
-		$$;next= concat($3.falselist,$5.next);
+		$$ = $2 ;
 	}
-
-	| IF '(' expr ')' stmt ELSE stmt		{$$ = ast_new_op("IFELSE",3,$3,$5,$7);}
-	| WHILE '(' expr ')' stmt			
-	{    
-		complete($3.true_list, $5.code.head->q.label);
-		complete($5.false_list, $3.code.head->q.label);
-		$$.next = $3.false_list;
-		gen(“goto $3.code.head->q.label”);
-	}
-	| FOR '(' affect_list ';' expr ';' affect_list ')' stmt	{$$ = ast_new_op("FOR",4,$3,$5,$7,$9);}
-	| FOR '(' affect_list ';' expr ';' expr ')' stmt	{$$ = ast_new_op("FOR",4,$3,$5,$7,$9);}
 	;
 
-stmt_list:
-	  stmt						{$$ = $1;}
-	| stmt_list stmt				{$$ = ast_new_op("STLIST",2,$1,$2);}
-	; 
- */
+tag_goto :
+	  /* vide */
+	{
+		Quad q = qoto( 0 ) ;
+		$$.code = ql_new( q ) ;
+		$$.next = ql_new( q ) ;
+	}
+	;
+stmt :
+	  IF '(' bool_expr ')' tag stmt 
+	{
+		complete( $3.true_list , $5 ) ;
+		$$.next = ql_concat( $3.false_list , $6.next ) ;
+		$$.code = ql_concat( $3.code , $6.code );
+	}
+	| IF '(' bool_expr ')' tag stmt ELSE tag stmt
+	{
+		Quad q = qoto( 0 ) ; /* goto vers fin du else_stmt */
+
+		complete( $3.true_list , $5 ) ;
+		complete( $3.false_list , $8 ) ;
+
+		$$.next = ql_concat( ql_new( q ) , $9.next ) ;
+		$$.code = ql_concat4( $3.code , $6.code , ql_new( q ) , $9.code ) ;
+	}
+	| WHILE tag '(' bool_expr ')' tag stmt
+	{
+		complete( $4.true_list , $6 ) ;
+		complete( $7.false_list , $2 ) ;
+		complete( $7.next , $2 ) ;
+
+		$$.next = $4.false_list ;
+		$$.code = ql_add( ql_concat( $4.code , $7.code ) , qoto( $2 ) ) ;
+	}
+	| FOR '(' affect_list ';' tag bool_expr ';' tag affect_list tag_goto ')' tag stmt
+	{
+		complete( $6.true_list , $12 ) ;
+		complete( $10.next , $5 ) ;
+		complete( $13.false_list , $5 ) ;
+		complete( $13.next , $8 ) ;
+
+		$$.next = $6.false_list ;
+		$$.code = ql_add( ql_concat5( $3.code , $6.code , $9.code , $10.code , $13.code ) , qoto( $8 ) ) ;
+	}
+	| affect ';'
+	{ 
+		$$ = $1 ;
+	}
+	| expr ';' 
+	{
+		$$ = $1 ;
+	}
+	| declaration
+	{
+		$$ = $1 ;
+	}
+	| '{' stmt_list '}'
+	{
+		$$ = $2 ;
+	}
+	;
+
+stmt_list :
+	  stmt tag
+	{
+		complete( $1.next , $2 ) ;/* pour str de controle */
+		$$ = $1 ;
+	}
+	| stmt tag stmt_list
+	{
+		complete( $1.next , $2 ) ;
+		$$.code = ql_concat( $1.code , $3.code ) ;
+		$$.true_list = ql_concat( $1.true_list , $3.true_list ) ;
+		$$.false_list = ql_concat( $1.false_list , $3.false_list ) ;
+		$$.next = ql_concat( $1.next , $3.next ) ;
+	}
+	;
 
 %%
 
-int yyerror (char *s) {
-
+int yyerror (char *s) 
+{
 	printf("\n%s\n", s);
 	return 0;
 }
 
-int main(int argc, char** argv){
+int main(int argc, char** argv)
+{
 	if (argc != 2)
 	{
 		printf("usage : %s filename",argv[0]);
 		exit(0);
 	}
-	st = st_init( 4096 , &checksum ) ;
+	st = st_init( 10, &checksum ) ;
 	yyin = fopen(argv[1],"r");
 
 	yyparse();

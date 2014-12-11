@@ -1,12 +1,14 @@
 %{
-	#include "ast.h"
-	#include "quads.h"
+	#include "quad_list.h"
+	#include "symbol_table.h"
 	#include "y.tab.h"
+
+	extern SymbolTable st ;
 %}
 
 id [_A-Za-z][_A-Za-z0-9]*
 entier [1-9][0-9]*
-syntaxe [+*()-\=<>{};.]
+syntaxe [+*()-\=<>{};.!]
 
 %%
 
@@ -17,6 +19,10 @@ syntaxe [+*()-\=<>{};.]
 "while"			{return WHILE;}
 "for" 			{return FOR;}
 
+">="			{return GEQ ;}
+"<="			{return LEQ ; }
+"=="			{return EQ ;}
+
 "&&"			{return BOOL_AND;}
 "||"			{return BOOL_OR;}
 
@@ -26,7 +32,17 @@ syntaxe [+*()-\=<>{};.]
 "--"			{return OPDECR;}
 
 {entier} 		{ yylval.valeur = atoi(yytext); return ENTIER; }
-{id} 			{ yylval.id = strdup(yytext);return ID; }
+{id} 			{ 
+				Symbol *s =  st_lookup( &st , yytext ) ; 
+
+				if( s == NULL )
+					yylval.id = strdup(yytext);
+				else 
+					yylval.id = s->id ;
+
+				return ID; 
+			}
+
 {syntaxe} 		{ return yytext[0]; }
 
 

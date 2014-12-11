@@ -65,8 +65,9 @@ static Symbol * __dc_get( DataChain *dc , const char *key )
 	if ( dc->data.id == NULL )
 		return NULL ;
 
-	while ( dc != NULL && strcmp( dc->data.id , key ) != 0 ) ;
+	while ( dc != NULL && ( strcmp( dc->data.id , key ) != 0 ) ) 
 		dc = dc->next ;
+	
 
 	return ( dc == NULL ) ? NULL : &dc->data ;
 }
@@ -135,6 +136,7 @@ int st_delete( SymbolTable *st , const char *key )
 Symbol * st_lookup( const SymbolTable *st , const char *key )
 {
 	const size_t index = st->hashfunc( st->size , key ) ;
+
 	return __dc_get( &st->table[index] , key ) ;		
 }
 
