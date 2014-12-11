@@ -1,7 +1,7 @@
 %{
 	#include "error.h"
 	#include "quad_list.h"
-	#include "symbol_table.h"
+	#include "st_to_mips.h"
 
 	int yylex();
 	int yyerror( char *msg );
@@ -66,6 +66,7 @@ axiom :
 		Quad q = qop( "EXIT" , NULL , NULL , NULL ) ;
 		$1.code = ql_add( $1.code , q ) ;
 
+		st_to_mips( &st , stdout ) ;
 		st_print( st ) ;
 		ql_print( $1.code  ) ;
 	}

@@ -4,6 +4,7 @@
 #define MAX_TAB_DIMENSIONS 100 
 
 enum symbol_type{
+	TYPE_TAB ,
 	TYPE_VAR_INT ,
 	TYPE_CONST_INT
 } ;
@@ -32,6 +33,8 @@ static inline struct symbol_info var_int()
 
 static inline struct symbol_info const_int( int valeur )
 	{ return ( struct symbol_info ) { TYPE_CONST_INT , .u.const_val = valeur } ; }
+
+struct symbol_info tab_info( unsigned int n , unsigned int *dim , int *init_val ) ;
 
 static inline Symbol s_var_int( char *id )
 	{ return (Symbol){ id , { TYPE_VAR_INT } } ; }

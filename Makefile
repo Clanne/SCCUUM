@@ -14,7 +14,7 @@ CC=gcc
 CFLAGS= -g -Wall -I$(IDIR) 
 
 # list of dependencies for main target
-OBJFILES=y.tab.o lex.yy.o symbol_table.o quad.o quad_list.o
+OBJFILES=y.tab.o lex.yy.o symbol.o symbol_table.o quad.o quad_list.o DynamicArray.o st_to_mips.o
 
 # prepend directory prefix to .o files
 OBJ=$(addprefix $(ODIR)/,$(OBJFILES))
