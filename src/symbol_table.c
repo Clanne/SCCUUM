@@ -99,7 +99,10 @@ Symbol * st_add( SymbolTable *st , const Symbol s )
 	const size_t index = st->hashfunc( st->size , s.id ) ;
 	Symbol *ret = __dc_add( &st->table[index] , s ) ; 
 
-	st->nb_elts += !ret ;
+	if( ret == NULL )
+		already_declared_error( s.id ) ;
+
+	st->nb_elts += 1 ;
 
 	return ret ;
 }
@@ -108,7 +111,7 @@ static unsigned int __next_tmp_num = 1 ;
 
 Symbol * st_new_temp( SymbolTable *st , struct symbol_info si )
 {
-	const char *tmp_prefix = "$tmp_" ;	
+	const char *tmp_prefix = "_tmp_" ;	
 	
 	const size_t n = strlen( tmp_prefix ) ;
 	size_t tmp_length = n + ceil( log10( ++ __next_tmp_num ) )+1;
@@ -135,9 +138,21 @@ int st_delete( SymbolTable *st , const char *key )
 
 Symbol * st_lookup( const SymbolTable *st , const char *key )
 {
+	Symbol *ret ;
 	const size_t index = st->hashfunc( st->size , key ) ;
 
-	return __dc_get( &st->table[index] , key ) ;		
+	ret = __dc_get( &st->table[index] , key ) ;
+
+	return ret ;
+}
+
+Symbol * lookup( const SymbolTable *st , const char *key )
+{
+	Symbol *ret = st_lookup( st , key ) ;
+	if( ret == NULL )
+		not_declared_error( key ) ;	
+
+	return ret ;
 }
 
 void st_destroy( SymbolTable st ) 
@@ -163,6 +178,14 @@ void st_print(SymbolTable st)
 		}
 		printf("\n");
 	}
+}
+
+const size_t checksum(const size_t s, const char *str)
+{
+	size_t ind = 0 ;
+	while( *str != '\0' )
+		ind += *(str++) ;
+	return ind % s;
 }
 
 			

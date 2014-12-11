@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "error.h"
 #include "symbol.h"
 
 typedef struct data_chain{
@@ -59,6 +60,10 @@ int st_delete( SymbolTable *st , const char *key ) ;
 Symbol * st_lookup( const SymbolTable *st , const char *key ) ;
 
 /**
+ * 	Quitte le programme si aucun symbole n'est associé à key dans le programme
+ */
+Symbol * lookup( const SymbolTable *st , const char *key );
+/**
 	deletes the hashtable and all the data its holding
 	@param st The hashtable to delete
 */
@@ -69,5 +74,10 @@ void st_destroy( SymbolTable st ) ;
 	@param st The hashtable to print	
 */
 void st_print(SymbolTable st) ;
+
+/**
+ * A simple checksum that can be used as a hash function
+ */
+const size_t checksum(const size_t s, const char *str) ;
 
 #endif 

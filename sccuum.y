@@ -1,20 +1,12 @@
 %{
-	#include "error.h"
-	#include "quad_list.h"
 	#include "st_to_mips.h"
+	#include "ql_to_mips.h"
 
 	int yylex();
 	int yyerror( char *msg );
 
-	extern FILE* yyin;
-
-	const size_t checksum(const size_t s, const char *str)
-	{
-		size_t ind = 0 ;
-		while( *str != '\0' )
-			ind += *(str++) ;
-		return ind % s;
-	}
+	FILE *fout ;
+	extern FILE *yyin ;
 
 	SymbolTable st ;
 %}
@@ -39,8 +31,8 @@
 %token OPINCR OPDECR
 %token BOOL_OR BOOL_AND
 %token EQ GEQ LEQ
-%token MAIN
-%token INT
+%token MAIN PRINTI RETURN
+%token INT VOID
 
 %type <code> expr bool_expr affect affect_list stmt stmt_list declaration tag_goto
 %type <instr> rel_op
@@ -61,14 +53,15 @@
 %%
 
 axiom :
-	  stmt_list 
+	  INT MAIN '(' VOID ')' '{' stmt_list RETURN ENTIER ';' '}'
 	{
 		Quad q = qop( "EXIT" , NULL , NULL , NULL ) ;
-		$1.code = ql_add( $1.code , q ) ;
+		$7.code = ql_add( $7.code , q ) ;
 
-		st_to_mips( &st , stdout ) ;
+		st_to_mips( &st , fout ) ;
+		ql_to_mips( $7.code , fout ) ;
 		st_print( st ) ;
-		ql_print( $1.code  ) ;
+		ql_print( $7.code  ) ;
 	}
 	;
 
@@ -117,36 +110,34 @@ expr :
 	| ID OPINCR
 	{
 		$$.result = st_new_temp( &st , var_int() ) ; //st_new_temp();
-		$$.code = ql_new( qop( "OPPOSTINC" , st_lookup( &st , $1 ) , NULL , $$.result ) );
+		$$.code = ql_new( qop( "OPPOSTINC" , lookup( &st , $1 ) , NULL , $$.result ) );
 	}
 	| OPINCR ID
 	{
-		$$.result = st_new_temp( &st , var_int() ) ; //st_new_temp();
-		$$.code = ql_new( qop( "OPPREINC" , st_lookup( &st ,$2 ) , NULL , $$.result ) );
+		Symbol *s = lookup( &st , $2 ) ;
+		$$.result = s ; //st_new_temp();
+		$$.code = ql_new( qop( "OPPREINC" , s , NULL , s ) );
 	}
 	| ID OPDECR
 	{
 		$$.result = st_new_temp( &st , var_int() ) ; //st_new_temp();
-		$$.code = ql_new( qop( "OPPOSTDEC" , st_lookup( &st ,$1 ) , NULL , $$.result ) );
+		$$.code = ql_new( qop( "OPPOSTDEC" , lookup( &st ,$1 ) , NULL , $$.result ) );
 	}
 	| OPDECR ID
 	{
-		$$.result = st_new_temp( &st , var_int() ) ; //st_new_temp();
-		$$.code = ql_new( qop( "OPPREDEC" , st_lookup( &st ,$2 ) , NULL , $$.result ) );
+		Symbol *s = lookup( &st , $2 ) ;
+		$$.result = s ; //st_new_temp();
+		$$.code = ql_new( qop( "OPPREDEC" , s , NULL , s ) );
 	}
 	| ENTIER
 	{
 		$$.code = ql_empty() ;
 		$$.result = st_new_temp( &st , const_int($1) ) ; 
 	}
-
 	| ID
 	{
 		$$.code = ql_empty();
-		$$.result = st_lookup( &st , $1 ) ;
-
-		if( $$.result == NULL )
-			not_declared_error( $1 ) ;
+		$$.result = lookup( &st , $1 ) ;
 	}
 	;
 
@@ -166,7 +157,7 @@ rel_op :
 affect :
 	  ID '=' expr
 	{
-		Quad q = qop( "OPMOVE" , $3.result , NULL , st_lookup( &st , $1 ) ) ;
+		Quad q = qop( "OPMOVE" , $3.result , NULL , lookup( &st , $1 ) ) ;
 		$$.code = ql_concat( $3.code , ql_new( q ) ) ;
 	}
 	;
@@ -185,8 +176,7 @@ affect_list :
 declaration :
 	  INT ID ';'
 	{
-		if( st_add( &st , s_var_int( $2 ) ) == NULL ) 
-			already_declared_error( $2 ) ;
+		st_add( &st , s_var_int( $2 ) ) ; 
 	}
 	;
 
@@ -282,6 +272,10 @@ stmt :
 	{
 		$$ = $1 ;
 	}
+	| PRINTI '(' ID ')' ';'
+	{
+		$$.code = ql_new( qop( "PRINTI" , NULL , NULL , lookup( &st , $3 ) ) ) ;
+	}
 	| '{' stmt_list '}'
 	{
 		$$ = $2 ;
@@ -321,6 +315,8 @@ int main(int argc, char** argv)
 	}
 	st = st_init( 10, &checksum ) ;
 	yyin = fopen(argv[1],"r");
+
+	fout = fopen( "output.s" , "w+" ) ;
 
 	yyparse();
 	return 0;

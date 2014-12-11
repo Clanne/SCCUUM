@@ -12,7 +12,9 @@ syntaxe [+*()-\=<>{};.!]
 
 %%
 
-"main()"		{return MAIN;}
+"main"			{return MAIN;}
+"printi"		{return PRINTI;}
+"return "		{return RETURN;}
 
 "if" 			{return IF;}
 "else" 			{return ELSE;}
@@ -27,13 +29,14 @@ syntaxe [+*()-\=<>{};.!]
 "||"			{return BOOL_OR;}
 
 "int"			{return INT;}
+"void"			{return VOID;}
 
 "++"			{return OPINCR;}
 "--"			{return OPDECR;}
 
 {entier} 		{ yylval.valeur = atoi(yytext); return ENTIER; }
 {id} 			{ 
-				Symbol *s =  st_lookup( &st , yytext ) ; 
+				Symbol *s = st_lookup( &st , yytext ) ; 
 
 				if( s == NULL )
 					yylval.id = strdup(yytext);

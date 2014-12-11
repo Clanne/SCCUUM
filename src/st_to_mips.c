@@ -26,7 +26,7 @@ void st_to_mips( SymbolTable *st , FILE *out )
 {
 	int i ;
 
-	fprintf( out , ".data\n" ) ;
+	fprintf( out , ".data\n\n" ) ;
 
 	for( i = 0 ; i < st->size ; ++ i )
 	{
