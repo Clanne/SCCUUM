@@ -9,10 +9,9 @@
 
 id [_A-Za-z][_A-Za-z0-9]*
 entier -?[0-9][0-9]*
-syntaxe [+*()-\=<>{};.!\[\]]
+syntaxe [+*()-\=<>{};.!\[\]$]
 
 %%
-
 "main"			{return MAIN;}
 "printi"		{return PRINTI;}
 "return "		{return RETURN;}
@@ -29,6 +28,7 @@ syntaxe [+*()-\=<>{};.!\[\]]
 "&&"			{return BOOL_AND;}
 "||"			{return BOOL_OR;}
 
+"stencil"		{return STENCIL;}
 "int"			{return INT;}
 "void"			{return VOID;}
 

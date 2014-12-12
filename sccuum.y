@@ -68,9 +68,9 @@
 %token BOOL_OR BOOL_AND
 %token EQ GEQ LEQ
 %token MAIN PRINTI RETURN
-%token INT VOID
+%token INT VOID STENCIL
 
-%type <code> expr bool_expr affect affect_list affect_or_expr stmt stmt_list declaration declaration_list tag_goto tab_read tab_write tab_declaration
+%type <code> expr bool_expr affect affect_list affect_or_expr stmt stmt_list declaration declaration_list tag_goto tab_read tab_write tab_declaration operation_stencil
 %type <intlist> liste_entier
 %type <tablist> liste_tableau
 %type <tabinfo> tableau
@@ -80,7 +80,7 @@
 %type <instr> rel_op
 %type <label> tag
 
-%start axiom
+%start declaration_stencil
 
 %nonassoc ')'
 %nonassoc ELSE
@@ -524,6 +524,63 @@ dimensions :
 		$$.nb_dim = 0 ;
 		$$.dim = malloc( sizeof(DynamicArray) ) ;
 		*($$.dim) = array_new( sizeof(int), 1 ) ;
+	}
+
+declaration_stencil :
+	  STENCIL	ID	'{'	ENTIER 	','	 ENTIER 	'}'	 '=' 	tableau ';'
+	{
+
+		if (  $9.nb_dim == $6 )
+		{
+			int good = 1;
+			int i;
+			int val_per_dim = ($4 * 2) +1;
+			for ( i = 0; i < $6 && good ; ++i)
+			{
+				good += (*(int*)array_get($9.dim,i) == val_per_dim);
+			}
+			if (good)
+			{	if(st_add( &st, s_stencil_info( $2,$4, $6, $9.tab->container ) ) == NULL )
+					already_declared_error( $2 ) ;	}
+			else
+				yyerror("invalid stencil");
+		}
+		else
+			yyerror("invalid stencil");
+	}
+	;
+operation_stencil :
+	  ID brackets_op '$' ID
+	{
+		Symbol* tab = lookup(&st,$1) ;
+		Symbol* sten = lookup(&st,$7) ;
+		if (tab->info.type == TYPE_TAB  &&  sten->info.type == TYPE_STENCIL)
+		{
+			int sten_voisin = sten->info.u.sinfo.voisinage ;
+			int* sten_val_tab = ten->info.u.sinfo.init_val ;
+			int sten_nb_dim = sten->info.u.sinfo.nb_dim ;
+
+			int tab_nb_dim = tab->info.u.tinfo.nb_dim ;
+			int* tab_dim = tab->info.u.tinfo.dim ;
+			int* tab_val = tab->info.u.tinfo.init_val ;
+
+			Symbol *indice_centre = $2.result;
+			int taille_stencil = pow((sten_voisin * 2) +1),sten_nb_dim;
+			int indice_centre_stencil = taille_stencil / 2 + 1 ;
+			
+			int n =0;
+			int res = 0;
+			int i;
+			while(n != sten_nb_dim)
+			{
+				for ( i = -sten_voisin; i =< sten_voisin; ++i)
+				{
+					a
+				}
+			}
+		}
+		else
+			yyerror("Use of stencil operator :\n \t tab[int] $ stencil \n \t stencil $ tab[int]")
 	}
 
 %%

@@ -17,3 +17,19 @@ struct symbol_info tab_info( unsigned int n , unsigned int *dim , int *init_val 
 	
 	return si ;
 }
+
+
+struct symbol_info stencil_info( unsigned int v , unsigned int n , int *init_val )
+{
+	struct stencil_info sti ;
+	struct symbol_info si ;
+
+	sti.voisinage = v ;
+	sti.nb_dim = n ;
+	sti.init_val = init_val ;
+
+	si.type = TYPE_STENCIL ;
+	si.u.sinfo = sti ;
+	
+	return si ;
+}
