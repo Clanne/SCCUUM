@@ -1,4 +1,6 @@
 %{
+	#include "DynamicArray.h"
+	#include "backpatch.h"
 	#include "st_to_mips.h"
 	#include "ql_to_mips.h"
 
@@ -18,6 +20,40 @@
 		QuadList next ;
 		Symbol *result ;
 	} code;
+
+	struct {
+		QuadList code ; 
+		QuadList backpatch ;
+		Symbol *result ;
+	} brack_op ;
+
+	struct {
+		int size;
+		DynamicArray *tab;
+	} intlist;
+
+	struct {
+		int taille;
+		int nb_dim;
+		int nb_val;
+		DynamicArray *dim;
+		DynamicArray *tab;
+	} tablist;
+
+	struct {
+		int nb_dim;
+		int nb_val;
+		DynamicArray *dim;
+		DynamicArray *tab;
+	} tabinfo;
+
+	struct {
+		int nb_dim;
+		DynamicArray *dim;
+	} dim_info ;
+
+	Symbol *symbol ;
+
 	unsigned int label ;
 	int valeur;
 	char *id;
@@ -34,7 +70,13 @@
 %token MAIN PRINTI RETURN
 %token INT VOID
 
-%type <code> expr bool_expr affect affect_list affect_or_expr stmt stmt_list declaration declaration_list tag_goto
+%type <code> expr bool_expr affect affect_list affect_or_expr stmt stmt_list declaration declaration_list tag_goto tab_read tab_write tab_declaration
+%type <intlist> liste_entier
+%type <tablist> liste_tableau
+%type <tabinfo> tableau
+%type <dim_info> dimensions
+%type <symbol> id_or_num
+%type <brack_op> brackets_op
 %type <instr> rel_op
 %type <label> tag
 
@@ -63,6 +105,11 @@ axiom :
 		st_print( st ) ;
 		ql_print( $7.code  ) ;
 	}
+	;
+
+id_or_num :
+	  ENTIER	{ $$ = st_new_temp( &st , const_int( $1 ) ) ; }
+	| ID		{ $$ = lookup( &st , $1 ) ; }
 	;
 
 expr : 
@@ -128,15 +175,15 @@ expr :
 		$$.result = s ; //st_new_temp();
 		$$.code = ql_new( qop( "OPPREDEC" , s , NULL , s ) );
 	}
-	| ENTIER
-	{
-		$$.code = ql_empty() ;
-		$$.result = st_new_temp( &st , const_int($1) ) ; 
-	}
-	| ID
+	| id_or_num
 	{
 		$$.code = ql_empty();
-		$$.result = lookup( &st , $1 ) ;
+		$$.result = $1 ;
+	}
+	| tab_read
+	{
+		$$.code = $1.code ;
+		$$.result = $1.result ;
 	}
 	;
 
@@ -151,8 +198,6 @@ rel_op :
 	| GEQ 		{ $$ = "BRGEQ" ; }
 	| LEQ		{ $$ = "BRLEQ" ; }
 	;
-
-
 
 declaration_list :
 	  ID ',' declaration_list
@@ -180,6 +225,10 @@ declaration :
 	  INT declaration_list ';'
 	{
 		$$ = $2 ;
+	}
+	| tab_declaration 
+	{
+		$$ = $1 ;
 	}
 	;
 
@@ -325,6 +374,157 @@ stmt_list :
 		$$.next = ql_concat( $1.next , $3.next ) ;
 	}
 	;
+
+tab_read :
+	  ID brackets_op
+	{
+		unsigned int tmp[2] = { 4 , 3 } ;
+		//TODO complete by passing ID data to backpatch
+		backpatch_tab_accessor_op( &st , $2.backpatch , 2 , tmp ) ;
+
+		Symbol *res = st_new_temp( &st , var_int() ) ;
+		Quad q = qop( "TABREAD" , lookup( &st , $1 ) , $2.result ,  res ) ; /* fetch tab indice res */
+
+		$$.code = ql_add( $2.code , q ) ;
+		$$.result = res ;
+	}
+	;
+
+tab_write :
+	  ID brackets_op '=' id_or_num
+	{
+		unsigned int tmp[2] = { 4 , 3 } ;
+		//TODO complete by passing ID data to backpatch
+		backpatch_tab_accessor_op( &st , $2.backpatch , 2 , tmp ) ;
+
+		Symbol *data = $4  ;
+		Quad q = qop( "TABWRITE" , lookup( &st , $1 ) , $2.result , data ) ; /* fetch tab indice res */
+
+		$$.code = ql_add( $2.code , q ) ;
+	}
+	;
+
+brackets_op :
+	  brackets_op '[' id_or_num ']'
+	{
+		Symbol *tmp = st_new_temp( &st , var_int() ) ;
+		Quad q1 = qop( "OPMUL" , NULL , $3 , tmp ) ; /* doit être backpatché dès qu'on connait les dims du tableau */
+		Quad q2 = qop( "OPADD" , $1.result , tmp , $1.result ) ;
+
+		$$.code = ql_concat( $$.code , ql_add( ql_new( q1 ) , q2 ) ) ;
+		$$.backpatch = ql_add( $1.backpatch , q1 ) ;
+		$$.result = $1.result ;
+	}
+	| '[' id_or_num ']'
+	{
+		Symbol *res = st_new_temp( &st , var_int() ) ;
+		Quad q1 = qop( "OPMOVE" , st_new_temp( &st , const_int( 0 ) ) , NULL , res ) ;
+		Quad q2 = qop( "OPADD" , $2 , res , res ) ;
+
+		$$.code = ql_add( ql_new( q1 ) , q2 ) ;
+		$$.backpatch = ql_empty() ;
+		$$.result = res ;
+	}
+	;
+
+tab_declaration :
+	  INT ID dimensions'['ENTIER']' ';'
+	{
+		int nbdim = 1 + $3.nb_dim ;
+		array_push_back( $3.dim, &($5) ) ;
+		if(st_add( &st, s_tab_info( $2,nbdim, $3.dim->container, NULL ) ) == NULL )
+			already_declared_error( $2 ) ;
+	}
+	| INT ID dimensions '['ENTIER']' '=' tableau ';'
+	{
+		if ( $8.nb_dim != $3.nb_dim + 1)
+			yyerror("Mauvaise dimensions de tableau");
+		if(st_add( &st, s_tab_info( $2,$8.nb_dim, $8.dim->container, $8.tab->container ) ) == NULL )
+			already_declared_error( $2 ) ;
+	}
+	;
+
+
+liste_entier :
+	liste_entier ENTIER ','
+	{
+		$$.size = 1 + $1.size ;
+		$$.tab = $1.tab ;
+
+		array_push_back( $$.tab, &($2) ) ;
+	}
+	| /* vide */
+	{
+		$$.size = 0 ;
+		$$.tab = malloc( sizeof(DynamicArray) ) ;
+
+		*($$.tab) = array_new( sizeof(int), 1 ) ;
+	}
+	;
+
+tableau :
+	  '{' liste_tableau tableau  '}'
+	{
+		$$.nb_dim = 1 + $2.nb_dim ;
+		$$.nb_val = $2.nb_val + $3.nb_val ;
+		$$.dim = $2.dim ;
+		$$.tab = $2.tab ;
+		int taille_dim = 1 + $2.taille ;
+		array_push_back( $$.dim, &taille_dim) ;
+		array_concat($$.tab,$3.tab);
+	}
+	| '{'liste_entier ENTIER  '}'
+	{
+		$$.nb_dim = 1 ;
+		$$.nb_val = 1+$2.size ;
+		$$.tab = $2.tab ;
+		$$.dim = malloc( sizeof(DynamicArray) ) ;
+		*($$.dim) = array_new( sizeof(int), 1 ) ;
+
+		int taille_dim = 1 + $2.size ;
+		int val_int = $3 ;
+		array_push_back( $$.dim, &taille_dim ) ;
+		array_push_back( $$.tab, &val_int) ;
+	}
+	;
+
+liste_tableau :
+	  liste_tableau tableau ','
+	{
+		$$.nb_dim = $1.nb_dim ;
+		$$.dim = $2.dim ;
+		$$.taille = 1 + $1.taille ;
+		$$.nb_val = $2.nb_val + $1.nb_val ;
+		$$.tab = $2.tab ;
+
+		array_concat( $$.tab, $1.tab ) ;
+	}
+	| /* vide */
+	{
+		$$.nb_dim = 1 ;
+		$$.tab = malloc( sizeof(DynamicArray) ) ;
+		$$.dim = malloc( sizeof(DynamicArray) ) ;
+		$$.taille = 0 ;
+		$$.nb_val = 0 ;
+
+		*($$.tab) = array_new( sizeof(int), 1 ) ;
+		*($$.dim) = array_new( sizeof(int), 1 ) ;
+	}
+	;
+
+dimensions :
+	  dimensions'[' ENTIER ']' 
+	{
+		$$.nb_dim = 1 + $1.nb_dim ;
+		$$.dim = $1.dim ;
+		array_push_back( $$.dim, &($3) ) ;
+	}
+	| /* vide */ 
+	{
+		$$.nb_dim = 0 ;
+		$$.dim = malloc( sizeof(DynamicArray) ) ;
+		*($$.dim) = array_new( sizeof(int), 1 ) ;
+	}
 
 %%
 

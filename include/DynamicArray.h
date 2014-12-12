@@ -27,6 +27,8 @@ void array_pop_back( DynamicArray *array ) ;
 
 void * array_get( const DynamicArray *array , const size_t i ) ;
 
+void array_concat(DynamicArray *array, DynamicArray *array_to_add) ;
+
 void array_shrink( DynamicArray *array ) ;
 
 #endif

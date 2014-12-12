@@ -93,6 +93,7 @@ void __branch_to_mips( char *instr  , unsigned int label , FILE *out )
 char * __load_operande( Symbol *s , char *reg , FILE *out )
 {
 	char *ret = NULL ;
+
 	if( s != NULL )
 	{
 		ret = s->id ;
@@ -101,6 +102,7 @@ char * __load_operande( Symbol *s , char *reg , FILE *out )
 		if( s->info.type == TYPE_CONST_INT )
 			fprintf( out , "\tli\t%s, %d\n" , reg , s->info.u.const_val ) ;
 	}
+
 	return ret ;
 }
 

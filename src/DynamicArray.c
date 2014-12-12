@@ -97,6 +97,15 @@ void * array_get( const DynamicArray *array , const size_t i )
 	return __get_ith_elt( array , i ) ;
 }
 
+void array_concat(DynamicArray *array, DynamicArray *array_to_add)
+{
+	int i ;
+	for ( i = 0 ; i < array_to_add->nb_elts ; ++i )
+	{
+		array_push_back( array, array_get( array_to_add, i ) );
+	}
+}
+
 void array_shrink( DynamicArray *array )
 {
 	array->container = realloc( array->container , array->nb_elts * array->elt_size ) ;

@@ -1,4 +1,5 @@
 %{
+	#include "DynamicArray.h"
 	#include "quad_list.h"
 	#include "symbol_table.h"
 	#include "y.tab.h"
@@ -8,7 +9,7 @@
 
 id [_A-Za-z][_A-Za-z0-9]*
 entier -?[0-9][0-9]*
-syntaxe [+*()-\=<>{};.!]
+syntaxe [+*()-\=<>{};.!\[\]]
 
 %%
 

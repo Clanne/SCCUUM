@@ -42,4 +42,7 @@ static inline Symbol s_var_int( char *id )
 static inline Symbol s_const_int( char *id , int val )
 	{ return (Symbol){ id, const_int(val) } ; }
 
+static inline Symbol s_tab_info(char *id,  unsigned int n , unsigned int *dim , int *init_val)
+	{ return (Symbol){ id, tab_info( n, dim, init_val ) } ; }
+
 #endif
